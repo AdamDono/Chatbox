@@ -12,6 +12,9 @@ class DerivClient:
         self.authorized = False
         self.tick_history = {} # {symbol: [price1, price2]}
         self.callbacks = [] # Functions to call on tick update
+        self.active_contracts = {} # {contract_id: {symbol, type, stake, buy_price}}
+        self.balance = 0
+        self.result_callback = None # Function to call when trade closes
 
     async def connect(self):
         try:
@@ -66,7 +69,7 @@ class DerivClient:
                 if symbol not in self.tick_history:
                     self.tick_history[symbol] = []
                 self.tick_history[symbol].append(price)
-                if len(self.tick_history[symbol]) > 60: # Keep 60 ticks
+                if len(self.tick_history[symbol]) > 100: # Keep 100 ticks for better analysis
                     self.tick_history[symbol].pop(0)
 
                 # Notify callbacks
@@ -92,8 +95,54 @@ class DerivClient:
             if "error" in data:
                 print(f"Buy Error: {data['error']['message']}")
             else:
-                print(f"Trade Executed! Contract ID: {data['buy']['contract_id']}")
-                # Notify Telegram (will be handled by callback)
+                contract_id = data['buy']['contract_id']
+                buy_price = data['buy']['buy_price']
+                print(f"DEBUG: Buy response received for contract {contract_id}")
+                # Update balance from buy response if available
+                if 'balance_after' in data['buy']:
+                    self.balance = data['buy']['balance_after']
+                    print(f"✅ Trade Executed! Contract ID: {contract_id}, Buy Price: ${buy_price}, Balance: ${self.balance}")
+                else:
+                    print(f"✅ Trade Executed! Contract ID: {contract_id}, Buy Price: ${buy_price}")
+                    # Request balance if not in response
+                    await self.get_balance()
+                
+                # Subscribe to this contract to get updates
+                print(f"DEBUG: Subscribing to contract {contract_id} for updates...")
+                await self.subscribe_contract(contract_id)
+        
+        elif msg_type == "proposal_open_contract":
+            # Contract status update
+            contract = data.get('proposal_open_contract', {})
+            contract_id = contract.get('contract_id', 'unknown')
+            is_sold = contract.get('is_sold', False)
+            print(f"DEBUG: Contract update for {contract_id}, is_sold={is_sold}")
+            
+            if is_sold:
+                # Contract closed!
+                sell_price = contract.get('sell_price', 0)
+                buy_price = contract.get('buy_price', 0)
+                profit = sell_price - buy_price
+                status = contract.get('status', 'unknown')
+                
+                print(f"📊 Contract {contract_id} closed: Profit=${profit:.2f}, Status={status}")
+                
+                # Request fresh balance after trade closes
+                await self.get_balance()
+                await asyncio.sleep(0.3)  # Wait for balance update
+                
+                # Notify via callback
+                print(f"DEBUG: Calling result_callback for contract {contract_id}...")
+                if self.result_callback:
+                    await self.result_callback(contract, profit)
+                else:
+                    print(f"DEBUG: result_callback is None!")
+        
+        elif msg_type == "balance":
+            # Balance update
+            print(f"DEBUG: Received balance message from Deriv: {data}")
+            self.balance = data['balance']['balance']
+            print(f"💰 Balance Updated: ${self.balance}")
 
     async def subscribe_ticks(self, symbols):
         req = {"ticks": symbols}
@@ -122,5 +171,27 @@ class DerivClient:
 
     def add_tick_callback(self, callback):
         self.callbacks.append(callback)
+    
+    def set_result_callback(self, callback):
+        """Set callback for trade results"""
+        self.result_callback = callback
+    
+    async def subscribe_contract(self, contract_id):
+        """Subscribe to contract updates to track when it closes"""
+        print(f"DEBUG: Sending subscription request for contract {contract_id}")
+        req = {
+            "proposal_open_contract": 1,
+            "contract_id": contract_id,
+            "subscribe": 1
+        }
+        await self.send(req)
+        print(f"DEBUG: Subscription request sent for contract {contract_id}")
+    
+    async def get_balance(self):
+        """Request current balance"""
+        print("DEBUG: Requesting balance from Deriv...")
+        req = {"balance": 1, "subscribe": 1}
+        await self.send(req)
+        print(f"DEBUG: Balance request sent. Current balance value: ${self.balance}")
 
 deriv_client = DerivClient()

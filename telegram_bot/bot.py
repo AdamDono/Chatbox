@@ -16,9 +16,10 @@ logging.basicConfig(
 
 # Global state
 IS_RUNNING = False
-AUTO_TRADE = False  # New: Control auto-trading
+AUTO_TRADE = True  # ENABLED: Bot will auto-trade on demo account
 APP_INSTANCE = None
 chart_analyzer = None
+last_prediction_time = {}  # Track last prediction time per symbol
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global IS_RUNNING
@@ -33,6 +34,14 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_msg = "RUNNING" if IS_RUNNING else "STOPPED"
     await update.message.reply_text(f"Status: {status_msg}\nConnected: {deriv_client.authorized}")
+
+async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Check current account balance"""
+    await deriv_client.get_balance()
+    await asyncio.sleep(0.5)  # Wait for balance update
+    msg = f"💰 *Account Balance*\n\n"
+    msg += f"Balance: `${deriv_client.balance:.2f} USD`"
+    await update.message.reply_text(msg, parse_mode='Markdown')
 
 async def prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📊 *Current Prices* 📊\n"
@@ -76,12 +85,99 @@ async def analyze_nasdaq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode='Markdown')
         print(f"Chart send error: {e}")
 
+async def trade_result_callback(contract, profit):
+    """Called when a trade closes"""
+    if not APP_INSTANCE:
+        return
+    
+    contract_id = contract.get('contract_id', 'N/A')
+    symbol = contract.get('display_name', 'Unknown')
+    buy_price = contract.get('buy_price', 0)
+    sell_price = contract.get('sell_price', 0)
+    status = contract.get('status', 'unknown')
+    
+    # Determine win/loss
+    is_win = profit > 0
+    emoji = "✅ WIN" if is_win else "❌ LOSS"
+    
+    msg = f"{emoji} *Trade Closed*\n\n"
+    msg += f"Symbol: *{symbol}*\n"
+    msg += f"Contract ID: `{contract_id}`\n\n"
+    msg += f"Buy Price: `${buy_price:.2f}`\n"
+    msg += f"Sell Price: `${sell_price:.2f}`\n"
+    msg += f"Profit/Loss: `${profit:.2f}`\n\n"
+    msg += f"💰 Balance: `${deriv_client.balance:.2f}`"
+    
+    for chat_id in config.ALLOWED_CHAT_IDS:
+        try:
+            await APP_INSTANCE.bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
+        except Exception as e:
+            print(f"Failed to send result to {chat_id}: {e}")
+
+def calculate_acceleration(history):
+    """Calculate price acceleration (rate of change of velocity)"""
+    if len(history) < 3:
+        return 0
+    
+    # Get last 3 prices
+    p1, p2, p3 = history[-3], history[-2], history[-1]
+    
+    # Calculate velocities
+    v1 = p2 - p1  # velocity between tick 1 and 2
+    v2 = p3 - p2  # velocity between tick 2 and 3
+    
+    # Acceleration is change in velocity
+    acceleration = abs(v2 - v1)
+    return acceleration
+
+def detect_momentum(history, symbol):
+    """Detect if price has building momentum in one direction"""
+    if len(history) < config.MOMENTUM_WINDOW:
+        return False
+    
+    recent_prices = history[-config.MOMENTUM_WINDOW:]
+    
+    # Check if prices are consistently moving in one direction
+    if "BOOM" in symbol:
+        # For Boom, look for upward momentum
+        increasing = sum(1 for i in range(1, len(recent_prices)) if recent_prices[i] > recent_prices[i-1])
+        return increasing >= (config.MOMENTUM_WINDOW - 2)  # At least 3 out of 5 increasing
+    elif "CRASH" in symbol:
+        # For Crash, look for downward momentum
+        decreasing = sum(1 for i in range(1, len(recent_prices)) if recent_prices[i] < recent_prices[i-1])
+        return decreasing >= (config.MOMENTUM_WINDOW - 2)  # At least 3 out of 5 decreasing
+    
+    return False
+
+async def send_early_warning(symbol, acceleration, current_price):
+    """Send early warning alert for potential spike"""
+    if not APP_INSTANCE:
+        return
+    
+    momentum_level = "HIGH" if acceleration > 0.5 else "MEDIUM"
+    
+    msg = f"⚠️ *SPIKE BUILDING* ⚠️\n\n"
+    msg += f"Symbol: *{symbol}*\n"
+    msg += f"Momentum: {momentum_level}\n"
+    msg += f"Acceleration: `{acceleration:.2f}` pts/tick\n"
+    msg += f"Current Price: `{current_price:.2f}`\n\n"
+    msg += "🔔 Potential spike in 5-15 seconds\n"
+    msg += "Prepare for entry!"
+    
+    for chat_id in config.ALLOWED_CHAT_IDS:
+        try:
+            await APP_INSTANCE.bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
+        except Exception as e:
+            print(f"Failed to send early warning to {chat_id}: {e}")
+
 async def strategy_callback(symbol, price, history):
+    global last_prediction_time
+    
     if not IS_RUNNING:
         print(f"⏸ Strategy paused (IS_RUNNING=False). Send /start to begin.")  # Debug
         return
 
-    if len(history) < 2:
+    if len(history) < config.MOMENTUM_WINDOW + 2:
         return
 
     current_price = history[-1]
@@ -90,6 +186,29 @@ async def strategy_callback(symbol, price, history):
     
     print(f"📊 {symbol}: diff={diff:.2f}, threshold={config.SPIKE_THRESHOLD}")  # Debug
 
+    # ===== PREDICTIVE DETECTION (Early Warning) =====
+    if config.PREDICTION_ENABLED and len(history) >= config.MOMENTUM_WINDOW:
+        acceleration = calculate_acceleration(history)
+        has_momentum = detect_momentum(history, symbol)
+        
+        print(f"DEBUG PREDICT {symbol}: accel={acceleration:.3f}, momentum={has_momentum}, threshold={config.ACCELERATION_THRESHOLD}")
+        
+        # Check cooldown
+        current_time = datetime.now().timestamp()
+        last_time = last_prediction_time.get(symbol, 0)
+        cooldown_passed = (current_time - last_time) > config.PREDICTION_COOLDOWN
+        
+        if acceleration > config.ACCELERATION_THRESHOLD and has_momentum and cooldown_passed:
+            # Send early warning
+            print(f"🔔 PREDICTION TRIGGERED for {symbol}!")
+            await send_early_warning(symbol, acceleration, current_price)
+            last_prediction_time[symbol] = current_time
+        elif acceleration > config.ACCELERATION_THRESHOLD:
+            print(f"DEBUG: High accel but no momentum or cooldown for {symbol}")
+        elif has_momentum:
+            print(f"DEBUG: Has momentum but low accel for {symbol}")
+
+    # ===== REACTIVE DETECTION (Trade Signal) =====
     signal_detected = False
     direction = ""
     entry = current_price
@@ -155,8 +274,13 @@ async def main():
     # Initialize chart analyzer
     chart_analyzer = ChartAnalyzer(deriv_client)
     
-    # Register callback
+    # Register callbacks
     deriv_client.add_tick_callback(strategy_callback)
+    deriv_client.set_result_callback(trade_result_callback)
+    
+    # Request initial balance
+    await asyncio.sleep(2)  # Wait for connection
+    await deriv_client.get_balance()
 
     global APP_INSTANCE
     # Telegram Application
@@ -166,7 +290,7 @@ async def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop))
     app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("status", status))
+    app.add_handler(CommandHandler("balance", balance))
     app.add_handler(CommandHandler("prices", prices))
     app.add_handler(CommandHandler("nasdaq", analyze_nasdaq))
     # app.add_handler(CommandHandler("test", test_alert)) # Removed test
