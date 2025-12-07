@@ -10264,3 +10264,5 @@ shell-init: error retrieving current directory: getcwd: cannot access parent dir
 /bin/bash: /Users/dam1mac89/Desktop/Chatbox/telegram_bot/start_bot.sh: Operation not permitted
 shell-init: error retrieving current directory: getcwd: cannot access parent directories: Operation not permitted
 /bin/bash: /Users/dam1mac89/Desktop/Chatbox/telegram_bot/start_bot.sh: Operation not permitted
+shell-init: error retrieving current directory: getcwd: cannot access parent directories: Operation not permitted
+/bin/bash: /Users/dam1mac89/Desktop/Chatbox/telegram_bot/start_bot.sh: Operation not permitted
