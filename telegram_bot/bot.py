@@ -21,6 +21,10 @@ APP_INSTANCE = None
 chart_analyzer = None
 last_prediction_time = {}  # Track last prediction time per symbol
 
+# Daily trade counter
+daily_trade_count = 0
+current_date = datetime.now().date()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global IS_RUNNING
     IS_RUNNING = True
@@ -30,6 +34,49 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global IS_RUNNING
     IS_RUNNING = False
     await update.message.reply_text("Bot Stopped. No new trades will be placed.")
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display daily trade statistics"""
+    global daily_trade_count, current_date
+    
+    msg = f"📊 *Daily Trade Statistics* 📊\n\n"
+    msg += f"Date: `{current_date.strftime('%Y-%m-%d')}`\n"
+    msg += f"Trades Today: `{daily_trade_count}`\n\n"
+    
+    if daily_trade_count == 0:
+        msg += "No trades yet today. Waiting for signals..."
+    else:
+        msg += f"Average: `{daily_trade_count / max(1, (datetime.now().hour * 60 + datetime.now().minute) / 60):.1f}` trades/hour"
+    
+    await update.message.reply_text(msg, parse_mode='Markdown')
+
+async def reset_daily_counter():
+    """Reset daily counter and send summary"""
+    global daily_trade_count, current_date
+    
+    if not APP_INSTANCE:
+        return
+    
+    # Send daily summary
+    yesterday = current_date
+    msg = f"📈 *Daily Summary - {yesterday.strftime('%Y-%m-%d')}* 📈\n\n"
+    msg += f"Total Trades: `{daily_trade_count}`\n\n"
+    
+    if daily_trade_count == 0:
+        msg += "No trades were executed today."
+    else:
+        msg += f"Great job! {daily_trade_count} trading signals were sent."
+    
+    for chat_id in config.ALLOWED_CHAT_IDS:
+        try:
+            await APP_INSTANCE.bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
+        except Exception as e:
+            print(f"Failed to send daily summary to {chat_id}: {e}")
+    
+    # Reset counter
+    daily_trade_count = 0
+    current_date = datetime.now().date()
+    print(f"✅ Daily counter reset. New date: {current_date}")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_msg = "RUNNING" if IS_RUNNING else "STOPPED"
@@ -244,11 +291,16 @@ async def strategy_callback(symbol, price, history):
 
     # Send enhanced signal
     if signal_detected and APP_INSTANCE:
+        global daily_trade_count
+        
+        # Increment daily counter
+        daily_trade_count += 1
+        
         risk = abs(entry - sl)
         reward = abs(tp - entry)
         rr_ratio = reward / risk if risk > 0 else 0
         
-        msg = f"🚨 *TRADE SIGNAL* 🚨\n\n"
+        msg = f"🚨 *TRADE SIGNAL #{daily_trade_count}* 🚨\n\n"
         msg += f"Symbol: *{symbol}*\n"
         msg += f"Direction: *{direction}* (3 min)\n\n"
         msg += f"Entry: `{entry:.2f}`\n"
@@ -267,6 +319,8 @@ async def strategy_callback(symbol, price, history):
                 await APP_INSTANCE.bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
             except Exception as e:
                 print(f"Failed to send signal to {chat_id}: {e}")
+        
+        print(f"📊 Daily trade count: {daily_trade_count}")
 
 async def main():
     global APP_INSTANCE, chart_analyzer
@@ -293,6 +347,7 @@ async def main():
     app.add_handler(CommandHandler("balance", balance))
     app.add_handler(CommandHandler("prices", prices))
     app.add_handler(CommandHandler("nasdaq", analyze_nasdaq))
+    app.add_handler(CommandHandler("stats", stats))
     # app.add_handler(CommandHandler("test", test_alert)) # Removed test
     # app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)) # Removed echo
 
@@ -304,6 +359,22 @@ async def main():
         await deriv_client.listen()
     
     asyncio.create_task(start_deriv_service())
+    
+    # Start midnight checker task
+    async def check_midnight():
+        """Check if it's midnight and reset counter"""
+        global current_date
+        while True:
+            await asyncio.sleep(60)  # Check every minute
+            now = datetime.now()
+            today = now.date()
+            
+            # Check if date has changed
+            if today != current_date:
+                print(f"🕛 Midnight detected! Resetting daily counter...")
+                await reset_daily_counter()
+    
+    asyncio.create_task(check_midnight())
     
     await app.initialize()
     await app.start()

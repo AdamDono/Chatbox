@@ -11,7 +11,7 @@ echo ""
 
 while true; do
     source venv/bin/activate
-    python bot.py
+    python3 bot.py
     
     EXIT_CODE=$?
     
