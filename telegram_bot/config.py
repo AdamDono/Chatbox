@@ -28,3 +28,5 @@ ACCELERATION_THRESHOLD = 0.3  # Minimum acceleration to trigger early warning
 MOMENTUM_WINDOW = 5  # Number of ticks to analyze for momentum
 PREDICTION_COOLDOWN = 30  # Seconds between prediction alerts for same symbol
 
+# Trade Signal Cooldown
+TRADE_SIGNAL_COOLDOWN = 180  # Seconds (3 min) between trade signals for same symbol

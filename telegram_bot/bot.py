@@ -20,10 +20,78 @@ AUTO_TRADE = True  # ENABLED: Bot will auto-trade on demo account
 APP_INSTANCE = None
 chart_analyzer = None
 last_prediction_time = {}  # Track last prediction time per symbol
+last_trade_time = {}  # Track last trade signal time per symbol
 
-# Daily trade counter
-daily_trade_count = 0
+# Daily trade counter with persistence
+COUNTER_FILE = '/Users/dam1mac89/Desktop/Chatbox/telegram_bot/daily_counter.txt'
+
+def load_daily_counter():
+    """Load daily counter from file"""
+    try:
+        if os.path.exists(COUNTER_FILE):
+            with open(COUNTER_FILE, 'r') as f:
+                data = f.read().strip().split(',')
+                if len(data) == 2:
+                    saved_date = data[0]
+                    saved_count = int(data[1])
+                    # Check if it's still the same day
+                    if saved_date == str(datetime.now().date()):
+                        return saved_count
+        return 0
+    except:
+        return 0
+
+def save_daily_counter(count):
+    """Save daily counter to file"""
+    try:
+        with open(COUNTER_FILE, 'w') as f:
+            f.write(f"{datetime.now().date()},{count}")
+    except Exception as e:
+        print(f"Error saving counter: {e}")
+
+daily_trade_count = load_daily_counter()
 current_date = datetime.now().date()
+
+# Trade tracking for success rate with persistence
+TRADE_HISTORY_FILE = '/Users/dam1mac89/Desktop/Chatbox/telegram_bot/trade_history.json'
+
+def load_trade_history():
+    """Load trade history from JSON file"""
+    try:
+        if os.path.exists(TRADE_HISTORY_FILE):
+            import json
+            with open(TRADE_HISTORY_FILE, 'r') as f:
+                data = json.load(f)
+                # Convert timestamp strings back to datetime objects
+                for trade in data:
+                    trade['timestamp'] = datetime.fromisoformat(trade['timestamp'])
+                # Only keep today's trades
+                today = datetime.now().date()
+                return [t for t in data if t['timestamp'].date() == today]
+        return []
+    except Exception as e:
+        print(f"Error loading trade history: {e}")
+        return []
+
+def save_trade_history(history):
+    """Save trade history to JSON file"""
+    try:
+        import json
+        # Convert datetime objects to strings for JSON
+        data = []
+        for trade in history:
+            trade_copy = trade.copy()
+            trade_copy['timestamp'] = trade['timestamp'].isoformat()
+            data.append(trade_copy)
+        with open(TRADE_HISTORY_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Error saving trade history: {e}")
+
+trade_history = load_trade_history()  # Load from file
+active_trades = {}  # Trades waiting for 3-min validation {symbol: trade_data}
+
+print(f"📊 Loaded {len(trade_history)} trades from history file")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global IS_RUNNING
@@ -50,22 +118,87 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(msg, parse_mode='Markdown')
 
+async def tradestats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display trade success statistics"""
+    global trade_history
+    
+    # Filter today's trades
+    today = datetime.now().date()
+    today_trades = [t for t in trade_history if t['timestamp'].date() == today]
+    
+    successful = [t for t in today_trades if t['status'] == 'success']
+    failed = [t for t in today_trades if t['status'] == 'failed']
+    pending = [t for t in today_trades if t['status'] == 'pending']
+    
+    total = len(today_trades)
+    
+    msg = f"📈 *Trade Success Statistics* 📈\n\n"
+    msg += f"Date: `{today.strftime('%Y-%m-%d')}`\n\n"
+    msg += f"Total Signals: `{total}`\n"
+    msg += f"✅ Successful (3-min): `{len(successful)}`\n"
+    msg += f"❌ Failed (re-triggered): `{len(failed)}`\n"
+    msg += f"⏳ Pending: `{len(pending)}`\n\n"
+    
+    if total > 0:
+        completed = len(successful) + len(failed)
+        if completed > 0:
+            success_rate = (len(successful) / completed) * 100
+            msg += f"Success Rate: `{success_rate:.1f}%`\n\n"
+        else:
+            msg += "Success Rate: Waiting for trades to complete...\n\n"
+    
+    # Group by symbol
+    if today_trades:
+        from collections import defaultdict
+        symbol_stats = defaultdict(lambda: {'total': 0, 'success': 0, 'failed': 0})
+        
+        for trade in today_trades:
+            symbol_stats[trade['symbol']]['total'] += 1
+            if trade['status'] == 'success':
+                symbol_stats[trade['symbol']]['success'] += 1
+            elif trade['status'] == 'failed':
+                symbol_stats[trade['symbol']]['failed'] += 1
+        
+        msg += "*By Symbol:*\n"
+        for symbol, stats in sorted(symbol_stats.items()):
+            completed_sym = stats['success'] + stats['failed']
+            if completed_sym > 0:
+                rate = (stats['success'] / completed_sym) * 100
+                msg += f"{symbol}: {stats['success']}/{completed_sym} ({rate:.0f}%)\n"
+            else:
+                msg += f"{symbol}: {stats['total']} pending\n"
+    
+    await update.message.reply_text(msg, parse_mode='Markdown')
+
 async def reset_daily_counter():
     """Reset daily counter and send summary"""
-    global daily_trade_count, current_date
+    global daily_trade_count, current_date, trade_history
     
     if not APP_INSTANCE:
         return
     
-    # Send daily summary
+    # Calculate success rate for the day
     yesterday = current_date
+    yesterday_trades = [t for t in trade_history if t['timestamp'].date() == yesterday]
+    successful = [t for t in yesterday_trades if t['status'] == 'success']
+    failed = [t for t in yesterday_trades if t['status'] == 'failed']
+    
+    # Send daily summary
     msg = f"📈 *Daily Summary - {yesterday.strftime('%Y-%m-%d')}* 📈\n\n"
-    msg += f"Total Trades: `{daily_trade_count}`\n\n"
+    msg += f"Total Trades: `{daily_trade_count}`\n"
     
     if daily_trade_count == 0:
-        msg += "No trades were executed today."
+        msg += "\nNo trades were executed today."
     else:
-        msg += f"Great job! {daily_trade_count} trading signals were sent."
+        completed = len(successful) + len(failed)
+        if completed > 0:
+            success_rate = (len(successful) / completed) * 100
+            msg += f"✅ Successful: `{len(successful)}`\n"
+            msg += f"❌ Failed: `{len(failed)}`\n"
+            msg += f"Success Rate: `{success_rate:.1f}%`\n\n"
+            msg += f"Great job! {daily_trade_count} trading signals were sent."
+        else:
+            msg += f"\nAll {daily_trade_count} trades are still pending validation."
     
     for chat_id in config.ALLOWED_CHAT_IDS:
         try:
@@ -291,10 +424,55 @@ async def strategy_callback(symbol, price, history):
 
     # Send enhanced signal
     if signal_detected and APP_INSTANCE:
-        global daily_trade_count
+        global daily_trade_count, trade_history, active_trades, last_trade_time
+        
+        # Check cooldown for trade signals (prevent duplicates)
+        current_time = datetime.now().timestamp()
+        last_time = last_trade_time.get(symbol, 0)
+        cooldown_passed = (current_time - last_time) > config.TRADE_SIGNAL_COOLDOWN
+        
+        if not cooldown_passed:
+            time_remaining = int(config.TRADE_SIGNAL_COOLDOWN - (current_time - last_time))
+            print(f"⏳ Trade signal cooldown for {symbol}: {time_remaining}s remaining")
+            return
+        
+        # Update last trade time
+        last_trade_time[symbol] = current_time
         
         # Increment daily counter
         daily_trade_count += 1
+        save_daily_counter(daily_trade_count)  # Persist to file
+        
+        # Record trade for success tracking
+        trade_data = {
+            'id': daily_trade_count,
+            'timestamp': datetime.now(),
+            'symbol': symbol,
+            'direction': direction,
+            'entry': entry,
+            'status': 'pending',  # pending, success, failed
+            'diff': diff
+        }
+        trade_history.append(trade_data)
+        save_trade_history(trade_history)  # Persist to file
+        
+        # Check if same symbol already has an active trade
+        if symbol in active_trades:
+            # Mark the previous trade as failed (re-triggered before 3 min)
+            prev_trade = active_trades[symbol]
+            for t in trade_history:
+                if t['id'] == prev_trade['id']:
+                    t['status'] = 'failed'
+                    duration = (datetime.now() - prev_trade['timestamp']).total_seconds() / 60
+                    print(f"❌ Trade #{prev_trade['id']} ({symbol}) FAILED - Re-triggered after {duration:.1f} min")
+                    save_trade_history(trade_history)  # Save updated status
+                    break
+        
+        # Set this as the active trade for this symbol
+        active_trades[symbol] = trade_data
+        
+        # Schedule success check after 3 minutes
+        asyncio.create_task(check_trade_success(trade_data['id'], symbol))
         
         risk = abs(entry - sl)
         reward = abs(tp - entry)
@@ -322,6 +500,33 @@ async def strategy_callback(symbol, price, history):
         
         print(f"📊 Daily trade count: {daily_trade_count}")
 
+async def check_trade_success(trade_id, symbol):
+    """Check if trade was successful after 3 minutes"""
+    global trade_history, active_trades
+    
+    # Wait 3 minutes
+    await asyncio.sleep(180)
+    
+    # Find the trade
+    trade = None
+    for t in trade_history:
+        if t['id'] == trade_id:
+            trade = t
+            break
+    
+    if not trade:
+        return
+    
+    # If still pending, mark as successful
+    if trade['status'] == 'pending':
+        trade['status'] = 'success'
+        print(f"✅ Trade #{trade_id} ({symbol}) SUCCESS - Completed 3 minutes without re-trigger")
+        save_trade_history(trade_history)  # Save updated status
+        
+        # Remove from active trades if it's still the active one
+        if symbol in active_trades and active_trades[symbol]['id'] == trade_id:
+            del active_trades[symbol]
+
 async def main():
     global APP_INSTANCE, chart_analyzer
     
@@ -348,10 +553,27 @@ async def main():
     app.add_handler(CommandHandler("prices", prices))
     app.add_handler(CommandHandler("nasdaq", analyze_nasdaq))
     app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("tradestats", tradestats))
     # app.add_handler(CommandHandler("test", test_alert)) # Removed test
     # app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)) # Removed echo
 
     print("Initializing Bot...")
+    
+    # Set up bot commands menu
+    async def setup_commands():
+        from telegram import BotCommand
+        commands = [
+            BotCommand("start", "🟢 Start trading bot"),
+            BotCommand("stop", "🔴 Stop trading bot"),
+            BotCommand("status", "📊 Check bot status"),
+            BotCommand("balance", "💰 View account balance"),
+            BotCommand("prices", "📈 Current market prices"),
+            BotCommand("stats", "📊 Daily trade count"),
+            BotCommand("tradestats", "🎯 Trade success rate"),
+            BotCommand("nasdaq", "📉 Nasdaq analysis"),
+        ]
+        await app.bot.set_my_commands(commands)
+        print("✅ Bot commands menu set up")
     
     # Start Deriv Connection properly
     async def start_deriv_service():
@@ -377,6 +599,7 @@ async def main():
     asyncio.create_task(check_midnight())
     
     await app.initialize()
+    await setup_commands()  # Set up command menu
     await app.start()
     await app.updater.start_polling()
     
