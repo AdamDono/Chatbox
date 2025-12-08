@@ -93,6 +93,26 @@ active_trades = {}  # Trades waiting for 3-min validation {symbol: trade_data}
 
 print(f"📊 Loaded {len(trade_history)} trades from history file")
 
+def calculate_streak(history):
+    """Calculate current win streak"""
+    streak = 0
+    # Sort by timestamp descending
+    sorted_history = sorted(history, key=lambda x: x['timestamp'], reverse=True)
+    
+    for trade in sorted_history:
+        if trade['status'] == 'success':
+            streak += 1
+        elif trade['status'] == 'failed':
+            break  # Streak broken
+        # Ignore pending trades
+            
+    return streak
+
+def format_duration(seconds):
+    """Format seconds into 2m 30s"""
+    m, s = divmod(int(seconds), 60)
+    return f"{m}m {s}s"
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global IS_RUNNING
     IS_RUNNING = True
@@ -146,6 +166,11 @@ async def tradestats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += f"Success Rate: `{success_rate:.1f}%`\n\n"
         else:
             msg += "Success Rate: Waiting for trades to complete...\n\n"
+            
+    # Add Streak Info
+    streak = calculate_streak(today_trades)
+    if streak > 0:
+        msg += f"🔥 Current Streak: *{streak} WINS*\n\n"
     
     # Group by symbol
     if today_trades:
@@ -463,9 +488,17 @@ async def strategy_callback(symbol, price, history):
             for t in trade_history:
                 if t['id'] == prev_trade['id']:
                     t['status'] = 'failed'
-                    duration = (datetime.now() - prev_trade['timestamp']).total_seconds() / 60
-                    print(f"❌ Trade #{prev_trade['id']} ({symbol}) FAILED - Re-triggered after {duration:.1f} min")
+                    duration = (datetime.now() - prev_trade['timestamp']).total_seconds()
+                    print(f"❌ Trade #{prev_trade['id']} ({symbol}) FAILED - Re-triggered after {duration:.1f}s")
                     save_trade_history(trade_history)  # Save updated status
+                    
+                    # Send failure notification
+                    msg = f"❌ *TRADE #{prev_trade['id']} FAILED* ❌\n"
+                    msg += f"Symbol: {symbol}\n"
+                    msg += f"Reason: Re-triggered (Stop Loss hit)\n"
+                    msg += f"Duration: {format_duration(duration)}"
+                    
+                    asyncio.create_task(send_async_msg(msg))
                     break
         
         # Set this as the active trade for this symbol
@@ -520,12 +553,35 @@ async def check_trade_success(trade_id, symbol):
     # If still pending, mark as successful
     if trade['status'] == 'pending':
         trade['status'] = 'success'
-        print(f"✅ Trade #{trade_id} ({symbol}) SUCCESS - Completed 3 minutes without re-trigger")
         save_trade_history(trade_history)  # Save updated status
+        
+        # Calculate streak
+        streak = calculate_streak(trade_history)
+        streak_msg = f"\n🔥 *{streak} WIN STREAK!*" if streak > 1 else ""
+        
+        print(f"✅ Trade #{trade_id} ({symbol}) SUCCESS - Completed 3 minutes")
+        
+        # Send success notification
+        msg = f"✅ *TRADE #{trade_id} WON!* 🏆\n"
+        msg += f"Symbol: {symbol}\n"
+        msg += f"Result: Held 3 mins safely\n"
+        msg += f"Status: WIN ✅{streak_msg}"
+        
+        await send_async_msg(msg)
         
         # Remove from active trades if it's still the active one
         if symbol in active_trades and active_trades[symbol]['id'] == trade_id:
             del active_trades[symbol]
+
+async def send_async_msg(text):
+    """Helper to send message to all users"""
+    if not APP_INSTANCE:
+        return
+    for chat_id in config.ALLOWED_CHAT_IDS:
+        try:
+            await APP_INSTANCE.bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+        except Exception as e:
+            print(f"Failed to send msg to {chat_id}: {e}")
 
 async def main():
     global APP_INSTANCE, chart_analyzer

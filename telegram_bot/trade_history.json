@@ -79,5 +79,113 @@
     "entry": 6031.939,
     "status": "pending",
     "diff": 15.484000000000378
+  },
+  {
+    "id": 40,
+    "timestamp": "2025-12-08T10:37:22.140445",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16237.234,
+    "status": "pending",
+    "diff": 9.963999999999942
+  },
+  {
+    "id": 41,
+    "timestamp": "2025-12-08T11:24:00.530075",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6020.763,
+    "status": "success",
+    "diff": 4.162000000000262
+  },
+  {
+    "id": 42,
+    "timestamp": "2025-12-08T11:26:14.065307",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3157.673,
+    "status": "success",
+    "diff": -1.7840000000001055
+  },
+  {
+    "id": 43,
+    "timestamp": "2025-12-08T11:31:39.072293",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4610.49,
+    "status": "success",
+    "diff": -5.331000000000131
+  },
+  {
+    "id": 44,
+    "timestamp": "2025-12-08T11:45:10.190649",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3162.17,
+    "status": "failed",
+    "diff": -2.8409999999998945
+  },
+  {
+    "id": 45,
+    "timestamp": "2025-12-08T12:06:36.278618",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6024.754,
+    "status": "success",
+    "diff": 13.666000000000167
+  },
+  {
+    "id": 46,
+    "timestamp": "2025-12-08T12:21:21.321750",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4614.238,
+    "status": "success",
+    "diff": -4.283999999999651
+  },
+  {
+    "id": 47,
+    "timestamp": "2025-12-08T12:21:22.319367",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3150.721,
+    "status": "success",
+    "diff": -12.835999999999785
+  },
+  {
+    "id": 48,
+    "timestamp": "2025-12-08T12:28:17.352737",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6012.606,
+    "status": "success",
+    "diff": 2.9929999999994834
+  },
+  {
+    "id": 49,
+    "timestamp": "2025-12-08T12:33:29.345356",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6019.245,
+    "status": "pending",
+    "diff": 8.319999999999709
+  },
+  {
+    "id": 50,
+    "timestamp": "2025-12-08T12:33:29.911246",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3152.729,
+    "status": "pending",
+    "diff": -1.4770000000003165
+  },
+  {
+    "id": 51,
+    "timestamp": "2025-12-08T12:33:30.160633",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16174.162,
+    "status": "pending",
+    "diff": 4.735000000000582
   }
 ]
