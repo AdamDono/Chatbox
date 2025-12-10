@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 # Global state
-IS_RUNNING = False
+IS_RUNNING = True
 AUTO_TRADE = True  # ENABLED: Bot will auto-trade on demo account
 APP_INSTANCE = None
 chart_analyzer = None
@@ -533,12 +533,13 @@ async def strategy_callback(symbol, price, history):
         
         print(f"📊 Daily trade count: {daily_trade_count}")
 
-async def check_trade_success(trade_id, symbol):
-    """Check if trade was successful after 3 minutes"""
+async def check_trade_success(trade_id, symbol, delay=180):
+    """Check if trade was successful after wait time"""
     global trade_history, active_trades
     
-    # Wait 3 minutes
-    await asyncio.sleep(180)
+    # Wait for the specified delay (default 3 mins)
+    if delay > 0:
+        await asyncio.sleep(delay)
     
     # Find the trade
     trade = None
@@ -596,6 +597,35 @@ async def main():
     # Request initial balance
     await asyncio.sleep(2)  # Wait for connection
     await deriv_client.get_balance()
+
+    # Resume pending trades monitoring
+    print("🔍 Checking for pending trades to resume...")
+    current_time = datetime.now()
+    resumed_count = 0
+    
+    for trade in trade_history:
+        if trade['status'] == 'pending':
+            # Calculate remaining time
+            elapsed = (current_time - trade['timestamp']).total_seconds()
+            remaining = max(0, config.DURATION_SECONDS - elapsed)
+            
+            if remaining == 0:
+                # Trade already completed successfully while offline
+                trade['status'] = 'success'
+                save_trade_history(trade_history)
+                print(f"   ✅ Trade #{trade['id']} ({trade['symbol']}) marked as SUCCESS (Completed while offline)")
+                resumed_count += 1
+            else:
+                # Still active, resume monitoring
+                active_trades[trade['symbol']] = trade
+                asyncio.create_task(check_trade_success(trade['id'], trade['symbol'], delay=remaining))
+                resumed_count += 1
+                print(f"   ⟳ Resumed monitoring for Trade #{trade['id']} ({trade['symbol']}). Remaining: {remaining:.1f}s")
+
+    if resumed_count > 0:
+        print(f"✅ Resumed {resumed_count} pending trades.")
+    else:
+        print("✅ No pending trades to resume.")
 
     global APP_INSTANCE
     # Telegram Application
