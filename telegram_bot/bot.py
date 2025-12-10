@@ -484,22 +484,36 @@ async def strategy_callback(symbol, price, history):
         # Check if same symbol already has an active trade
         if symbol in active_trades:
             # Mark the previous trade as failed (re-triggered before 3 min)
+            # Check if previous trade actually survived 3 mins but wasn't processed yet
             prev_trade = active_trades[symbol]
-            for t in trade_history:
-                if t['id'] == prev_trade['id']:
-                    t['status'] = 'failed'
-                    duration = (datetime.now() - prev_trade['timestamp']).total_seconds()
-                    print(f"❌ Trade #{prev_trade['id']} ({symbol}) FAILED - Re-triggered after {duration:.1f}s")
-                    save_trade_history(trade_history)  # Save updated status
-                    
-                    # Send failure notification
-                    msg = f"❌ *TRADE #{prev_trade['id']} FAILED* ❌\n"
-                    msg += f"Symbol: {symbol}\n"
-                    msg += f"Reason: Re-triggered (Stop Loss hit)\n"
-                    msg += f"Duration: {format_duration(duration)}"
-                    
-                    asyncio.create_task(send_async_msg(msg))
-                    break
+            duration = (datetime.now() - prev_trade['timestamp']).total_seconds()
+            
+            if duration >= config.DURATION_SECONDS:
+                # It actually won!
+                for t in trade_history:
+                    if t['id'] == prev_trade['id']:
+                        t['status'] = 'success'
+                        save_trade_history(trade_history)
+                        
+                        msg = f"✅ *TRADE #{prev_trade['id']} RECOVERED* 🏆\nReason: Survived {format_duration(duration)} (Delayed processing)"
+                        asyncio.create_task(send_async_msg(msg))
+                        break
+            else:
+                # Mark as failed (re-triggered before 3 min)
+                for t in trade_history:
+                    if t['id'] == prev_trade['id']:
+                        t['status'] = 'failed'
+                        print(f"❌ Trade #{prev_trade['id']} ({symbol}) FAILED - Re-triggered after {duration:.1f}s")
+                        save_trade_history(trade_history)  # Save updated status
+                        
+                        # Send failure notification
+                        msg = f"❌ *TRADE #{prev_trade['id']} FAILED* ❌\n"
+                        msg += f"Symbol: {symbol}\n"
+                        msg += f"Reason: Re-triggered (Stop Loss hit)\n"
+                        msg += f"Duration: {format_duration(duration)}"
+                        
+                        asyncio.create_task(send_async_msg(msg))
+                        break
         
         # Set this as the active trade for this symbol
         active_trades[symbol] = trade_data

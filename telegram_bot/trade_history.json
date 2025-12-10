@@ -367,5 +367,320 @@
     "entry": 6021.129,
     "status": "success",
     "diff": 13.35400000000027
+  },
+  {
+    "id": 42,
+    "timestamp": "2025-12-10T12:07:44.251178",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6020.293,
+    "status": "success",
+    "diff": 2.105999999999767
+  },
+  {
+    "id": 43,
+    "timestamp": "2025-12-10T12:07:48.228279",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16166.212,
+    "status": "success",
+    "diff": 38.98099999999977
+  },
+  {
+    "id": 44,
+    "timestamp": "2025-12-10T12:16:02.267079",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3165.586,
+    "status": "success",
+    "diff": -4.316000000000258
+  },
+  {
+    "id": 45,
+    "timestamp": "2025-12-10T12:16:13.383134",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6024.976,
+    "status": "success",
+    "diff": 4.7409999999999854
+  },
+  {
+    "id": 46,
+    "timestamp": "2025-12-10T12:21:56.683265",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3157.914,
+    "status": "success",
+    "diff": -6.473999999999705
+  },
+  {
+    "id": 47,
+    "timestamp": "2025-12-10T12:22:35.251043",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6023.29,
+    "status": "success",
+    "diff": 3.0399999999999636
+  },
+  {
+    "id": 48,
+    "timestamp": "2025-12-10T12:25:13.257397",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16168.579,
+    "status": "success",
+    "diff": 19.3799999999992
+  },
+  {
+    "id": 49,
+    "timestamp": "2025-12-10T12:31:21.139944",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3153.912,
+    "status": "success",
+    "diff": -5.936000000000149
+  },
+  {
+    "id": 50,
+    "timestamp": "2025-12-10T12:31:21.977644",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6023.389,
+    "status": "success",
+    "diff": 1.52599999999984
+  },
+  {
+    "id": 51,
+    "timestamp": "2025-12-10T12:35:50.201688",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3152.847,
+    "status": "success",
+    "diff": -2.7199999999998
+  },
+  {
+    "id": 52,
+    "timestamp": "2025-12-10T12:37:17.119539",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6023.5,
+    "status": "success",
+    "diff": 4.496000000000095
+  },
+  {
+    "id": 53,
+    "timestamp": "2025-12-10T12:39:10.143728",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4589.635,
+    "status": "success",
+    "diff": -5.181999999999789
+  },
+  {
+    "id": 54,
+    "timestamp": "2025-12-10T12:41:06.182126",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3151.98,
+    "status": "success",
+    "diff": -2.8659999999999854
+  },
+  {
+    "id": 55,
+    "timestamp": "2025-12-10T12:41:07.040584",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6031.942,
+    "status": "success",
+    "diff": 10.002000000000407
+  },
+  {
+    "id": 56,
+    "timestamp": "2025-12-10T12:53:07.160260",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3154.286,
+    "status": "success",
+    "diff": -1.8009999999999309
+  },
+  {
+    "id": 57,
+    "timestamp": "2025-12-10T12:55:46.194956",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6034.282,
+    "status": "success",
+    "diff": 12.766000000000531
+  },
+  {
+    "id": 58,
+    "timestamp": "2025-12-10T12:56:45.137524",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4591.888,
+    "status": "success",
+    "diff": -2.2799999999997453
+  },
+  {
+    "id": 59,
+    "timestamp": "2025-12-10T13:14:48.631090",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3155.027,
+    "status": "failed",
+    "diff": -2.6219999999998436
+  },
+  {
+    "id": 60,
+    "timestamp": "2025-12-10T13:14:48.902798",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6033.794,
+    "status": "failed",
+    "diff": 6.305999999999585
+  },
+  {
+    "id": 61,
+    "timestamp": "2025-12-10T13:14:49.156474",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16158.775,
+    "status": "failed",
+    "diff": 28.040999999999258
+  },
+  {
+    "id": 62,
+    "timestamp": "2025-12-10T13:14:49.406588",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4590.442,
+    "status": "failed",
+    "diff": -5.38799999999992
+  },
+  {
+    "id": 63,
+    "timestamp": "2025-12-10T13:30:34.861546",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6040.721,
+    "status": "success",
+    "diff": 3.719999999999345
+  },
+  {
+    "id": 64,
+    "timestamp": "2025-12-10T13:30:35.728983",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16170.541,
+    "status": "failed",
+    "diff": 25.203999999999724
+  },
+  {
+    "id": 65,
+    "timestamp": "2025-12-10T13:30:36.081825",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3154.793,
+    "status": "failed",
+    "diff": -3.8350000000000364
+  },
+  {
+    "id": 66,
+    "timestamp": "2025-12-10T13:30:36.371456",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4591.841,
+    "status": "success",
+    "diff": -2.2839999999996508
+  },
+  {
+    "id": 67,
+    "timestamp": "2025-12-10T13:39:29.223895",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3153.263,
+    "status": "success",
+    "diff": -4.55600000000004
+  },
+  {
+    "id": 68,
+    "timestamp": "2025-12-10T13:39:30.077812",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16175.066,
+    "status": "success",
+    "diff": 13.64600000000064
+  },
+  {
+    "id": 69,
+    "timestamp": "2025-12-10T13:48:44.305758",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3151.489,
+    "status": "success",
+    "diff": -2.6839999999997417
+  },
+  {
+    "id": 70,
+    "timestamp": "2025-12-10T13:55:14.279674",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6030.744,
+    "status": "success",
+    "diff": 4.273000000000138
+  },
+  {
+    "id": 71,
+    "timestamp": "2025-12-10T13:55:48.634952",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3146.352,
+    "status": "success",
+    "diff": -2.9200000000000728
+  },
+  {
+    "id": 72,
+    "timestamp": "2025-12-10T13:59:12.347356",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3145.181,
+    "status": "success",
+    "diff": -2.36200000000008
+  },
+  {
+    "id": 73,
+    "timestamp": "2025-12-10T14:05:05.225250",
+    "symbol": "CRASH500",
+    "direction": "BUY",
+    "entry": 3144.53,
+    "status": "success",
+    "diff": -2.0169999999998254
+  },
+  {
+    "id": 74,
+    "timestamp": "2025-12-10T14:07:46.399454",
+    "symbol": "CRASH1000",
+    "direction": "BUY",
+    "entry": 4592.729,
+    "status": "success",
+    "diff": -6.572000000000116
+  },
+  {
+    "id": 75,
+    "timestamp": "2025-12-10T14:09:44.658531",
+    "symbol": "BOOM500",
+    "direction": "SELL",
+    "entry": 6030.18,
+    "status": "success",
+    "diff": 4.363000000000284
+  },
+  {
+    "id": 76,
+    "timestamp": "2025-12-10T14:12:44.306796",
+    "symbol": "BOOM1000",
+    "direction": "SELL",
+    "entry": 16148.431,
+    "status": "pending",
+    "diff": 5.257999999999811
   }
 ]

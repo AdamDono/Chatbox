@@ -1,0 +1,47 @@
+300+ Day Trading Plan (10% Daily Compounding)
+Start: $100 | Start Date: Feb 1, 2025
+
+WARNING: This is a mathematical projection. Real-world trading has risks.
+Numbers above $5,000 become increasingly hard to achieve due to market liquidity.
+
+MONTH 1 (February)
+Date       | Day | Start Bal | Target (+10%) | End Balance
+--------------------------------------------------------
+2025-02-01 | 1   | $100.00   | +$10.00       | $110.00
+...
+2025-02-15 | 15  | $379.75   | +$37.97       | $417.72
+...
+2025-02-28 | 28  | $1,311.00 | +$131.10      | $1,442.10
+
+MONTH 2 (March)
+2025-03-01 | 29  | $1,442.10 | +$144.21      | $1,586.31
+...
+2025-03-31 | 59  | $25,163   | +$2,516       | $27,680
+
+MONTH 3 (April)
+2025-04-01 | 60  | $27,680   | +$2,768       | $30,448
+...
+2025-04-30 | 89  | $439,092  | +$43,909      okay calculat| $483,002
+
+[NOTE: At this point, you are trading with lot sizes > 50.0, which is extremely high risk]
+
+MONTH 4 (May) - Becoming Unrealistic
+Start: $483,002 -> End: $9,270,906
+
+MONTH 5 (June) - Theoretical Only
+Start: $9M -> End: $161M
+
+MONTH 6 (July)
+Start: $161M -> End: $3.1 Billion
+
+MONTH 7 (August)
+Start: $3.1B -> End: $59 Billion
+
+MONTH 8 (September)
+Start: $59B -> End: $1 Trillion (Greater than Apple's Market Cap)
+
+MONTH 9 (October)
+Star: $1T -> End: $19 Trillion
+
+MONTH 10 (November)
+End: $348 Trillion (More money than exists on Earth)
